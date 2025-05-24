@@ -1,9 +1,9 @@
 const axios = require('axios');
 
 /**
- * Fetch all sub-accounts under the agency.
+ * Fetch all locations (sub-accounts) under the agency.
  * @param {string} agencyToken - Agency-level access token
- * @returns {Promise<Array>} - List of sub-account locations
+ * @returns {Promise<Array>} - Array of location objects
  */
 async function getSubAccounts(agencyToken) {
   try {
@@ -21,9 +21,9 @@ async function getSubAccounts(agencyToken) {
 }
 
 /**
- * Fetch contacts from a specific sub-account.
- * @param {string} locationToken - Location-specific access token
- * @returns {Promise<Array>} - List of contacts
+ * Fetch all contacts for a given location using its token.
+ * @param {string} locationToken - Location-level access token
+ * @returns {Promise<Array>} - Array of contact objects
  */
 async function getContacts(locationToken) {
   try {

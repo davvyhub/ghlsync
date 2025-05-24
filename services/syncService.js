@@ -1,35 +1,19 @@
 const fs = require('fs-extra');
-const { agencyToken, noCodeDbEndpoint, noCodeDbToken } = require('../config/config');
-const { getLocationAccessToken } = require('./oauthService');
+const path = require('path');
 const { getSubAccounts, getContacts } = require('./ghlService');
-const axios = require('axios');
+const { getLocationAccessToken } = require('./oauthService');
+const { pushContactToNoCodeBackend } = require('./nocodeBackendService');
+const { agencyToken } = require('../config/config');
+const { log } = require('../utils/logger');
 
-const cachePath = './database/localCache.json';
-
-/**
- * Push one contact to NoCodeBackend
- */
-async function pushToNoCodeBackend(contact) {
-  try {
-    await axios.post(noCodeDbEndpoint, contact, {
-      headers: {
-        Authorization: `Bearer ${noCodeDbToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    console.log(`✅ Synced contact: ${contact.firstName || ''} ${contact.lastName || ''}`);
-  } catch (err) {
-    console.error('❌ Failed to sync contact:', err.response?.data || err.message);
-  }
-}
+const cachePath = path.resolve(__dirname, '../database/localCache.json');
 
 /**
- * Check all sub-accounts and sync new contacts
+ * Sync new contacts from all sub-accounts to NoCodeBackend
  */
 async function syncNewContacts() {
-  console.log('🔄 Starting sync job...');
-
+  log('🔁 Starting sync...');
+  
   let cache = {};
   if (await fs.exists(cachePath)) {
     cache = await fs.readJson(cachePath);
@@ -42,33 +26,37 @@ async function syncNewContacts() {
       const locationToken = await getLocationAccessToken(account.companyId, account.id);
       const contacts = await getContacts(locationToken);
 
-      const lastSyncedIds = cache[account.id] || [];
-      const newContacts = contacts.filter(c => !lastSyncedIds.includes(c.id));
+      const previousIds = cache[account.id] || [];
+      const newContacts = contacts.filter(c => !previousIds.includes(c.id));
 
       if (newContacts.length) {
-        console.log(`📥 Found ${newContacts.length} new contacts for ${account.name}`);
+        log(`📥 Found ${newContacts.length} new contacts in "${account.name}"`);
       }
 
       for (const contact of newContacts) {
         const formatted = {
-          firstName: contact.firstName,
-          lastName: contact.lastName,
-          email: contact.email,
+          name: `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
           phone: contact.phone,
-          createdAt: contact.createdAt
+          email: contact.email,
+          tags: (contact.tags || []).join(', '),
+          source: contact.source || '',
+          type: contact.type || '',
+          missing_teeth: contact['custom:Missing Teeth'] || '',
+          last_dentist: contact['custom:Last Dentist'] || '',
+          location_id: account.id
         };
 
-        await pushToNoCodeBackend(formatted);
+        await pushContactToNoCodeBackend(formatted);
       }
 
-      cache[account.id] = contacts.map(c => c.id); // update synced list
+      cache[account.id] = contacts.map(c => c.id);
     } catch (err) {
-      console.error(`❌ Sync error for ${account.name}:`, err.message);
+      log(`❌ Failed to sync contacts for "${account.name}": ${err.message}`, 'ERROR');
     }
   }
 
   await fs.writeJson(cachePath, cache, { spaces: 2 });
-  console.log('✅ Sync job complete.\n');
+  log('✅ Sync complete.\n');
 }
 
 module.exports = { syncNewContacts };

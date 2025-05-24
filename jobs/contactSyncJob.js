@@ -3,12 +3,12 @@ const { syncNewContacts } = require('../services/syncService');
 const { log } = require('../utils/logger');
 
 /**
- * Starts the scheduled cron job for syncing contacts
+ * Starts the scheduled sync job
  */
 function startSyncJob() {
-  // Runs every 10 minutes → change as needed for testing (e.g., '*/30 * * * * *' for 30s)
+  // Every 10 minutes → change to '*/30 * * * * *' for every 30 seconds if testing
   cron.schedule('*/10 * * * *', async () => {
-    log('Running scheduled contact sync...');
+    log('⏰ Cron job triggered: syncing contacts...');
     try {
       await syncNewContacts();
     } catch (error) {
