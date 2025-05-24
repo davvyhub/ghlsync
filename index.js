@@ -16,5 +16,4 @@ app.listen(PORT, () => {
   log(`🚀 Express server running on port ${PORT}`);
 });
 
-// Start cron-based contact sync
 startSyncJob();
