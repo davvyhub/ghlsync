@@ -1,0 +1,15 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Cache or logs
+database/localCache.json
+npm-debug.log*
+.DS_Store
+
+# OS / IDE-specific files
+.vscode/
+.idea/
+*.swp
